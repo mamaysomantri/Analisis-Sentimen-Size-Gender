@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisis Size vs Gender — Brodo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F3EF;
+    --surface:#FFFFFF;
+    --ink:#22252B;
+    --ink-soft:#6C7078;
+    --line:#E4E1DA;
+    --male:#3B5B6B;
+    --female:#C1666B;
+    --unknown:#C9A85C;
+    --good:#4C7A5C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:40px 24px 80px;}
+  header{margin-bottom:32px;}
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:32px;
+    font-weight:700;
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  .sub{color:var(--ink-soft);font-size:15px;max-width:60ch;line-height:1.5;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px;
+    margin-bottom:20px;
+  }
+
+  #dropzone{
+    border:2px dashed var(--line);
+    border-radius:12px;
+    padding:48px 24px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  #dropzone.drag{border-color:var(--male); background:#F0F4F5;}
+  #dropzone svg{margin-bottom:12px;opacity:.5;}
+  #dropzone .main-txt{font-weight:600;font-size:15px;margin-bottom:4px;}
+  #dropzone .sub-txt{font-size:13px;color:var(--ink-soft);}
+  input[type=file]{display:none;}
+
+  .hidden{display:none !important;}
+
+  .status-row{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-soft);margin-bottom:20px;}
+  .status-row .fname{color:var(--ink);font-weight:600;}
+  .reset-link{margin-left:auto;font-size:13px;color:var(--male);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit;}
+
+  .stat-row{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+  .stat{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .stat .num{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;}
+  .stat .label{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .stat.male .num{color:var(--male);}
+  .stat.female .num{color:var(--female);}
+  .stat.unknown .num{color:var(--unknown);}
+
+  h2{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;margin:0 0 16px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);}
+  th{color:var(--ink-soft);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  td.num-cell{font-variant-numeric:tabular-nums;}
+  tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .tag.male{background:#E7EFF1;color:var(--male);}
+  .tag.female{background:#F7E9EB;color:var(--female);}
+  .tag.unknown{background:#F6EFDE;color:var(--unknown);}
+  .conf-high{color:var(--good);font-weight:600;}
+  .conf-est{color:var(--unknown);}
+  .conf-low{color:var(--ink-soft);}
+
+  .unknown-box{margin-top:8px;}
+  .unknown-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .unknown-row:last-child{border-bottom:none;}
+  .unknown-row .nm{flex:1;font-size:13.5px;font-weight:500;}
+  .unknown-row select{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    padding:5px 8px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--bg);
+  }
+  .apply-btn{
+    margin-top:14px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    padding:9px 16px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .apply-btn:hover{opacity:.88;}
+
+  canvas{max-height:340px;}
+
+  .download-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:var(--male);
+    color:#fff;
+    border:none;
+    padding:13px 22px;
+    border-radius:10px;
+    font-size:14.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .download-btn:hover{opacity:.9;}
+  .note{font-size:12.5px;color:var(--ink-soft);margin-top:12px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Brodo — Internal Tool</div>
+    <h1>Analisis Size vs Gender Pembeli</h1>
+    <p class="sub">Upload data order (Excel/CSV berisi Nama Customer & Size / SKU Produk). Gender ditebak otomatis dari nama, lalu direkap per size dalam satu proses.</p>
+  </header>
+
+  <div class="card" id="uploadCard">
+    <div id="dropzone">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3v12m0-12l4 4m-4-4L8 7M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="#22252B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="main-txt">Klik untuk pilih file, atau drag & drop di sini</div>
+      <div class="sub-txt">.xlsx atau .csv — kolom minimal: Nama Customer, dan Size atau SKU Produk</div>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+  </div>
+
+  <div id="resultsArea" class="hidden">
+
+    <div class="status-row">
+      <span>File dimuat:</span><span class="fname" id="fnameLabel"></span>
+      <button class="reset-link" id="resetBtn">Upload file lain</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat male"><div class="num" id="statMale">0</div><div class="label">Laki-laki</div></div>
+      <div class="stat female"><div class="num" id="statFemale">0</div><div class="label">Perempuan</div></div>
+      <div class="stat unknown"><div class="num" id="statUnknown">0</div><div class="label">Tidak diketahui</div></div>
+      <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total baris</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Chart: Laki-laki vs Perempuan per Size</h2>
+      <canvas id="chart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Tabel Rekap per Size</h2>
+      <div id="rekapTableWrap"></div>
+    </div>
+
+    <div class="card hidden" id="unknownCard">
+      <h2>Nama Belum Dikenali <span style="color:var(--ink-soft);font-weight:400;font-size:13px;">— assign manual biar makin akurat</span></h2>
+      <div class="unknown-box" id="unknownList"></div>
+      <button class="apply-btn" id="applyBtn">Terapkan & Update Semua</button>
+    </div>
+
+    <div class="card">
+      <h2>Download Hasil</h2>
+      <button class="download-btn" id="downloadBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download Excel (data lengkap + rekap)
+      </button>
+      <p class="note">File Excel berisi 2 sheet: "Data Berlabel" (semua baris + gender + confidence) dan "Rekap per Size" (tabel ringkasan).</p>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ---------- Kamus nama Indonesia ----------
+const FEMALE_NAMES = new Set(["aeni","siti","nur","nurul","dewi","dwi","sri","sari","putri","putria","wati","yanti","ningsih","ningrum",
+"ayu","indah","rina","rini","fitri","fitria","fitriani","yuni","yulia","yuliana","wulan","wulandari",
+"anisa","annisa","anissa","aisyah","aisya","fatimah","fadilah","fadila","khadijah","zahra","zahara","kartika",
+"melati","mawar","mega","meilani","meli","dinda","dian","diana","diani","tika","tiara","fira","laila",
+"lala","nadia","nabila","salsabila","salsa","alya","alia","aulia","citra","cinta","desi","dessy",
+"eka","erika","erna","evi","fani","fany","farida","farah","gita","hana","hani","ika","ina","ira","irma",
+"jihan","kiki","lely","lia","lina","linda","lisa","maya","mila","mira","mirna","nia","nita","novi",
+"novita","nurhayati","nuraini","oktavia","priska","putrid","rahayu","rahmawati","ranti","ratih","ratna",
+"resti","reza","rika","riska","rita","riza","rizka","sabrina","safitri","sarah","selvi","septi",
+"septiani","shinta","silvia","sinta","sisca","sondang","tania","tantri","tuti","umi","utami","vania",
+"vera","vina","vivi","viviani","wahyuni","widya","winda","wiwin","yani","yeni","yolanda","yuliani",
+"yunita","zaskia","zulaikha","asyera","stacy","marsya","anggraeni","soraiya","afirta","elsa","alfi","rahma",
+"visky","kirana","larasati","paramitha","gadis","ayunda","clara","claudia","daniar","devi","diva",
+"elvina","fahira","femmy","hanifa","icha","intan","jasmine","karina","keisha","lidya","mala",
+"maharani","nadhira","olivia","priscilla","qonita","raisa","safira","talita","umairah","vionita","wardah",
+"yasmin","zahira","zaskiya","henyfusinta","henyfu","vini","perwitasari","pertiwi","avidata"]);
+
+const MALE_NAMES = new Set(["muhammad","ahmad","achmad","budi","agus","andi","andre","andri","adi","aditya","adit","agung",
+"akbar","alfin","ali","amir","anton","aris","arif","arya","asep","bagus","bambang","bayu","bima","dani",
+"danang","dedi","denny","deni","dimas","dodi","doni","edi","eko","fahmi","faisal","faiz","fajar","fajri",
+"farhan","fauzan","fauzi","ferdi","fikri","fitrah","galih","gilang","hadi","hafiz","hamzah","hendra",
+"hendri","heri","hery","ilham","imam","indra","irfan","irwan","iqbal","ivan","jaka","joko","kevin","krisna",
+"kurniawan","lukman","mahesa","maulana","nanda","nanang","oki","panji","pratama","putra","rafi",
+"rafli","raga","rahmat","raihan","raka","ramadhan","randi","ricky","ricko","ridho","rifqi","rizal",
+"rizky","rizki","robby","romi","ryan","sandi","satria","surya","syahrul","taufik","teguh","tri","udin",
+"wahyu","wawan","wildan","willy","yandi","yoga","yudi","yudha","yusuf","zaki","zainal","zulfikar","alex",
+"raqi","fadhlillah","wiradharma","ardian","jossy","sakti"]);
+
+const FEMALE_SUFFIX = ["wati","yanti","ningsih","ningrum","sari","dewi","ani","nia","ita","yah","ah"];
+const MALE_SUFFIX = ["wan","man","din","udin","yanto","anto","irwan","han"];
+
+let manualOverrides = {}; // firstNameLower -> "Laki-laki" | "Perempuan"
+let rows = [];
+let nameCol = null, sizeCol = null, skuCol = null;
+
+function normalize(s){ return (s||"").toString().toLowerCase().replace(/[^a-z]/g,""); }
+function firstName(full){
+  if(!full) return "";
+  return full.toString().trim().split(/\s+/)[0];
+}
+function guessGender(full){
+  const fn = normalize(firstName(full));
+  if(!fn) return {gender:"Tidak diketahui", conf:"Rendah"};
+  if(manualOverrides[fn]) return {gender:manualOverrides[fn], conf:"Manual"};
+  if(FEMALE_NAMES.has(fn)) return {gender:"Perempuan", conf:"Tinggi"};
+  if(MALE_NAMES.has(fn)) return {gender:"Laki-laki", conf:"Tinggi"};
+  for(const suf of FEMALE_SUFFIX){ if(fn.endsWith(suf)) return {gender:"Perempuan", conf:"Perkiraan"}; }
+  for(const suf of MALE_SUFFIX){ if(fn.endsWith(suf)) return {gender:"Laki-laki", conf:"Perkiraan"}; }
+  return {gender:"Tidak diketahui", conf:"Rendah"};
+}
+
+// ---------- Upload handling ----------
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+dropzone.addEventListener('click', ()=> fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e=>{
+  if(e.target.files.length) handleFile(e.target.files[0]);
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  document.getElementById('resultsArea').classList.add('hidden');
+  document.getElementById('uploadCard').classList.remove('hidden');
+  fileInput.value = "";
+  manualOverrides = {};
+});
+
+function handleFile(file){
+  document.getElementById('fnameLabel').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+    if(rows.length === 0){ alert("File kosong atau format tidak terbaca."); return; }
+    detectColumns();
+    process();
+    document.getElementById('uploadCard').classList.add('hidden');
+    document.getElementById('resultsArea').classList.remove('hidden');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function detectColumns(){
+  const cols = Object.keys(rows[0]);
+  nameCol = cols.find(c => /customer|pembeli/i.test(c)) || cols.find(c=>/nama/i.test(c));
+  sizeCol = cols.find(c => /^size$/i.test(c.trim()));
+  skuCol = cols.find(c => /sku/i.test(c));
+}
+
+function getSize(row){
+  if(sizeCol && row[sizeCol] !== "") return row[sizeCol].toString();
+  if(skuCol && row[skuCol]){
+    const s = row[skuCol].toString();
+    if(s.includes(".")) return s.split(".").pop();
+  }
+  return "N/A";
+}
+
+let chartInstance = null;
+
+function process(){
+  const unknownNames = new Set();
+
+  rows.forEach(r=>{
+    const g = guessGender(r[nameCol]);
+    r.__firstName = firstName(r[nameCol]);
+    r.__gender = g.gender;
+    r.__conf = g.conf;
+    r.__size = getSize(r);
+    if(g.gender === "Tidak diketahui") unknownNames.add(r.__firstName);
+  });
+
+  // stats
+  const male = rows.filter(r=>r.__gender==="Laki-laki").length;
+  const female = rows.filter(r=>r.__gender==="Perempuan").length;
+  const unknown = rows.filter(r=>r.__gender==="Tidak diketahui").length;
+  document.getElementById('statMale').textContent = male;
+  document.getElementById('statFemale').textContent = female;
+  document.getElementById('statUnknown').textContent = unknown;
+  document.getElementById('statTotal').textContent = rows.length;
+
+  // rekap per size
+  const sizes = [...new Set(rows.map(r=>r.__size))].sort((a,b)=>{
+    const na = parseFloat(a), nb = parseFloat(b);
+    if(!isNaN(na) && !isNaN(nb)) return na-nb;
+    return a.toString().localeCompare(b.toString());
+  });
+  const rekap = sizes.map(sz=>{
+    const subset = rows.filter(r=>r.__size===sz);
+    return {
+      size: sz,
+      male: subset.filter(r=>r.__gender==="Laki-laki").length,
+      female: subset.filter(r=>r.__gender==="Perempuan").length,
+      unknown: subset.filter(r=>r.__gender==="Tidak diketahui").length,
+      total: subset.length
+    };
+  });
+
+  renderRekapTable(rekap);
+  renderChart(rekap);
+  renderUnknownList(unknownNames);
+
+  window.__rekap = rekap; // stash for download
+}
+
+function renderRekapTable(rekap){
+  let html = '<table><thead><tr><th>Size</th><th>Laki-laki</th><th>Perempuan</th><th>Tidak diketahui</th><th>Total</th></tr></thead><tbody>';
+  rekap.forEach(r=>{
+    html += `<tr><td>${r.size}</td><td class="num-cell">${r.male}</td><td class="num-cell">${r.female}</td><td class="num-cell">${r.unknown}</td><td class="num-cell"><b>${r.total}</b></td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('rekapTableWrap').innerHTML = html;
+}
+
+function renderChart(rekap){
+  const ctx = document.getElementById('chart').getContext('2d');
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: rekap.map(r=>r.size),
+      datasets: [
+        {label:'Laki-laki', data: rekap.map(r=>r.male), backgroundColor:'#3B5B6B', borderRadius:4},
+        {label:'Perempuan', data: rekap.map(r=>r.female), backgroundColor:'#C1666B', borderRadius:4}
+      ]
+    },
+    options: {
+      responsive:true,
+      plugins:{ legend:{position:'bottom', labels:{font:{family:'Inter'}}} },
+      scales:{
+        x:{title:{display:true,text:'Size'}, grid:{display:false}},
+        y:{title:{display:true,text:'Jumlah Pembeli'}, beginAtZero:true, ticks:{precision:0}}
+      }
+    }
+  });
+}
+
+function renderUnknownList(unknownNames){
+  const card = document.getElementById('unknownCard');
+  const list = document.getElementById('unknownList');
+  if(unknownNames.size === 0){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  let html = '';
+  [...unknownNames].sort().forEach(n=>{
+    const id = 'sel_'+normalize(n);
+    html += `<div class="unknown-row"><span class="nm">${n}</span>
+      <select id="${id}" data-name="${normalize(n)}">
+        <option value="">— pilih —</option>
+        <option value="Laki-laki">Laki-laki</option>
+        <option value="Perempuan">Perempuan</option>
+      </select></div>`;
+  });
+  list.innerHTML = html;
+}
+
+document.getElementById('applyBtn').addEventListener('click', ()=>{
+  const selects = document.querySelectorAll('#unknownList select');
+  selects.forEach(sel=>{
+    if(sel.value) manualOverrides[sel.dataset.name] = sel.value;
+  });
+  process();
+});
+
+// ---------- Download ----------
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const dataSheetRows = rows.map(r=>{
+    const out = {};
+    Object.keys(r).forEach(k=>{
+      if(!k.startsWith('__')) out[k] = r[k];
+    });
+    out['Nama Depan'] = r.__firstName;
+    out['Gender'] = r.__gender;
+    out['Confidence'] = r.__conf;
+    out['Size Final'] = r.__size;
+    return out;
+  });
+  const rekapRows = (window.__rekap||[]).map(r=>({
+    'Size': r.size, 'Laki-laki': r.male, 'Perempuan': r.female, 'Tidak diketahui': r.unknown, 'Total': r.total
+  }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataSheetRows), "Data Berlabel");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rekapRows), "Rekap per Size");
+  XLSX.writeFile(wb, "hasil_labeling_size_gender.xlsx");
+});
+</script>
+</body>
+</html>
